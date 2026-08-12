@@ -189,9 +189,9 @@ export default async function StartupPage({
           )}
 
           <div className="border border-border/60 p-4 text-xs leading-relaxed text-muted-foreground">
-            Earnest deposits prove buyer intent. After the seller accepts, asset
-            transfer (code, domain, Stripe, customers) is completed off-platform
-            with your preferred escrow counsel.
+            Sending an offer is free and opens a chat with the seller. After they
+            accept, asset transfer (code, domain, Stripe, customers) is completed
+            off-platform with your preferred escrow counsel.
           </div>
         </aside>
       </div>

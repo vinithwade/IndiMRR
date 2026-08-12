@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/currency/money";
@@ -14,6 +15,7 @@ type OfferRow = {
   status: string;
   created_at: string;
   buyer_name?: string;
+  conversation_id?: string | null;
 };
 
 export function SellerOffers({
@@ -34,9 +36,10 @@ export function SellerOffers({
           amount_cents: 15000000,
           currency: "USD",
           message: "Ready to close in 2 weeks with Escrow.com.",
-          status: "deposited",
+          status: "pending",
           created_at: new Date().toISOString(),
           buyer_name: "Alex Buyer",
+          conversation_id: "demo",
         },
       ]);
       setLoading(false);
@@ -92,20 +95,29 @@ export function SellerOffers({
           <p className="mt-2 text-sm text-muted-foreground">
             {o.buyer_name ?? "Buyer"} · {o.message || "No message"}
           </p>
-          {o.status === "deposited" && (
-            <div className="mt-3 flex gap-2">
-              <Button size="sm" onClick={() => respond(o.id, "accepted")}>
-                Accept
+          <div className="mt-3 flex flex-wrap gap-2">
+            {o.conversation_id && (
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/dashboard/messages/${o.conversation_id}`}>
+                  Message
+                </Link>
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => respond(o.id, "rejected")}
-              >
-                Reject
-              </Button>
-            </div>
-          )}
+            )}
+            {o.status === "pending" && (
+              <>
+                <Button size="sm" onClick={() => respond(o.id, "accepted")}>
+                  Accept
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => respond(o.id, "rejected")}
+                >
+                  Reject
+                </Button>
+              </>
+            )}
+          </div>
           {o.status === "accepted" && (
             <div className="mt-3 border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
               Closing checklist: transfer repo access, domain, Stripe account,

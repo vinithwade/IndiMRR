@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Money } from "@/components/currency/money";
 import { isDemoMode } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth";
 
 export const metadata = { title: "My offers" };
 
@@ -17,21 +18,20 @@ export default async function BuyerOffersPage() {
           slug="inboxpilot"
           amount={15000000}
           currency="USD"
-          status="pending_deposit"
+          status="pending"
+          conversationId="demo"
         />
       </OffersShell>
     );
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const user = await getAuthUser();
+  if (!user || user.id === "demo") return null;
 
   const { data: offers } = await supabase
     .from("offers")
-    .select("*, listings(startup_id, startups(name, slug))")
+    .select("*, listings(startup_id, startups(name, slug)), conversations(id)")
     .eq("buyer_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -41,8 +41,8 @@ export default async function BuyerOffersPage() {
         <div className="border border-dashed border-border/80 bg-card/20 p-10 text-center">
           <h3 className="text-lg font-semibold">No offers yet</h3>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            When you make an offer on a listing and pay the earnest deposit, it
-            shows up here with seller response status.
+            When you send an offer on a listing, it shows up here and opens a
+            chat with the seller.
           </p>
           <Button asChild className="mt-6">
             <Link href="/marketplace">Browse marketplace</Link>
@@ -54,6 +54,10 @@ export default async function BuyerOffersPage() {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const listing = o.listings as any;
             const startup = listing?.startups;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const conversationId = (o as any).conversations?.id as
+              | string
+              | undefined;
             return (
               <OfferCard
                 key={o.id}
@@ -63,6 +67,7 @@ export default async function BuyerOffersPage() {
                 currency={o.currency}
                 status={o.status}
                 accepted={o.status === "accepted"}
+                conversationId={conversationId}
               />
             );
           })}
@@ -85,7 +90,7 @@ function OffersShell({
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">My offers</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Track deposits and seller responses
+            Track offers and seller responses
             {typeof count === "number" ? ` · ${count} total` : ""}.
           </p>
         </div>
@@ -108,6 +113,7 @@ function OfferCard({
   currency,
   status,
   accepted,
+  conversationId,
 }: {
   name: string;
   slug: string;
@@ -115,6 +121,7 @@ function OfferCard({
   currency: string;
   status: string;
   accepted?: boolean;
+  conversationId?: string;
 }) {
   return (
     <div className="border border-border/80 bg-card/50 p-5">
@@ -132,10 +139,15 @@ function OfferCard({
       <p className="mt-3 text-xl font-semibold">
         <Money cents={amount} from={currency} />
       </p>
+      {conversationId && (
+        <Button asChild size="sm" variant="outline" className="mt-4">
+          <Link href={`/dashboard/messages/${conversationId}`}>Open chat</Link>
+        </Button>
+      )}
       {accepted && (
         <div className="mt-4 border border-primary/30 bg-primary/5 p-3 text-xs leading-relaxed text-muted-foreground">
           Seller accepted. Coordinate asset transfer off-platform (repo, domain,
-          Stripe, customers). Keep your deposit receipt for closing.
+          Stripe, customers) with your preferred escrow counsel.
         </div>
       )}
     </div>

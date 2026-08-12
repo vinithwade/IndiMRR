@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { isDemoMode } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
-import { formatPercent, isVerified } from "@/lib/format";
+import { getAuthUser } from "@/lib/supabase/auth";
+import { isVerified } from "@/lib/format";
 import { getDemoStartups } from "@/lib/demo/data";
 import type { StartupWithMetrics } from "@/lib/types";
 import { Money } from "@/components/currency/money";
@@ -44,7 +45,7 @@ export default async function DashboardPage() {
         id: "1",
         amount_cents: 15000000,
         currency: "USD",
-        status: "deposited",
+        status: "pending",
         message: "Ready to close in 2 weeks.",
         created_at: new Date().toISOString(),
         startup_name: startups[0]?.name,
@@ -54,10 +55,8 @@ export default async function DashboardPage() {
     myOffersCount = 1;
   } else {
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return null;
+    const user = await getAuthUser();
+    if (!user || user.id === "demo") return null;
 
     userEmail = user.email ?? user.id;
     const { data: profile } = await supabase
@@ -67,7 +66,9 @@ export default async function DashboardPage() {
       .maybeSingle();
     displayName =
       profile?.full_name ||
-      user.user_metadata?.full_name ||
+      (typeof user.user_metadata?.full_name === "string"
+        ? user.user_metadata.full_name
+        : null) ||
       userEmail.split("@")[0];
 
     const { data } = await supabase
@@ -145,7 +146,7 @@ export default async function DashboardPage() {
     isVerified(s.metrics?.verification_status, s.metrics?.last_synced_at)
   ).length;
   const pendingIncoming = incomingOffers.filter(
-    (o) => o.status === "deposited" || o.status === "pending_deposit"
+    (o) => o.status === "pending"
   ).length;
 
   const steps = [
@@ -168,14 +169,14 @@ export default async function DashboardPage() {
       title: "List for sale on the marketplace",
       href: startups[0]
         ? `/dashboard/startups/${startups[0].id}`
-        : "/dashboard/startups/new",
+        : "/dashboard/startups",
       desc: "Set asking price and go live",
     },
     {
       done: pendingIncoming > 0 || myOffersCount > 0,
       title: "Receive or make an offer",
       href: "/marketplace",
-      desc: "Earnest deposits signal serious buyers",
+      desc: "Free offers open a chat with the other side",
     },
   ];
   const completedSteps = steps.filter((s) => s.done).length;
@@ -285,7 +286,7 @@ export default async function DashboardPage() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold tracking-tight">Your startups</h2>
             <Button asChild size="sm" variant="ghost">
-              <Link href="/dashboard/startups/new">New</Link>
+              <Link href="/dashboard/startups">View all</Link>
             </Button>
           </div>
 
@@ -298,7 +299,6 @@ export default async function DashboardPage() {
                 <h3 className="mt-4 text-lg font-semibold">No startups yet</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Create a profile, connect Stripe, and publish verified revenue.
-                  Buyers trust API-backed MRR — not screenshots.
                 </p>
                 <Button asChild className="mt-6">
                   <Link href="/dashboard/startups/new">Create your first startup</Link>
@@ -306,90 +306,52 @@ export default async function DashboardPage() {
               </div>
             </div>
           ) : (
-            <div className="overflow-hidden border border-border/80">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-border/80 bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Startup</th>
-                    <th className="hidden px-4 py-3 font-medium sm:table-cell">
-                      MRR
-                    </th>
-                    <th className="hidden px-4 py-3 font-medium md:table-cell">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 font-medium text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {startups.map((s) => {
-                    const verified = isVerified(
-                      s.metrics?.verification_status,
-                      s.metrics?.last_synced_at
-                    );
-                    return (
-                      <tr
-                        key={s.id}
-                        className="border-b border-border/50 last:border-0 hover:bg-primary/5"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Link
-                              href={`/dashboard/startups/${s.id}`}
-                              className="font-medium hover:text-primary"
-                            >
-                              {s.name}
-                            </Link>
-                            {verified && (
-                              <ShieldCheck className="size-3.5 text-primary" />
-                            )}
-                            {s.for_sale && (
-                              <Badge className="bg-primary/15 text-primary hover:bg-primary/15">
-                                For sale
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {s.category}
-                            <span className="sm:hidden">
-                              {" "}
-                              ·{" "}
-                              <Money
-                                cents={s.metrics?.mrr_cents}
-                                from={s.metrics?.currency}
-                                compact
-                              />
-                            </span>
-                          </p>
-                        </td>
-                        <td className="hidden px-4 py-3 sm:table-cell">
-                          <Money
-                            cents={s.metrics?.mrr_cents}
-                            from={s.metrics?.currency}
-                          />
-                          <span className="mt-0.5 block text-xs text-muted-foreground">
-                            {formatPercent(s.metrics?.mom_growth)} MoM
-                          </span>
-                        </td>
-                        <td className="hidden px-4 py-3 capitalize text-muted-foreground md:table-cell">
-                          {s.status}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-2">
-                            <Button asChild size="sm" variant="outline">
-                              <Link href={`/dashboard/startups/${s.id}`}>
-                                Manage
-                              </Link>
-                            </Button>
-                            <Button asChild size="sm" variant="ghost">
-                              <Link href={`/startup/${s.slug}`}>View</Link>
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="space-y-2">
+              {startups.slice(0, 3).map((s) => {
+                const verified = isVerified(
+                  s.metrics?.verification_status,
+                  s.metrics?.last_synced_at
+                );
+                return (
+                  <Link
+                    key={s.id}
+                    href={`/dashboard/startups/${s.id}`}
+                    className="flex items-center justify-between gap-3 border border-border/80 bg-card/40 px-4 py-3 transition-colors hover:border-primary/40"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-medium">{s.name}</p>
+                        {verified && (
+                          <ShieldCheck className="size-3.5 shrink-0 text-primary" />
+                        )}
+                        {s.for_sale && (
+                          <Badge className="bg-primary/15 text-primary hover:bg-primary/15">
+                            For sale
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {s.category} ·{" "}
+                        <Money
+                          cents={s.metrics?.mrr_cents}
+                          from={s.metrics?.currency}
+                          compact
+                        />
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs capitalize text-muted-foreground">
+                      {s.status}
+                    </span>
+                  </Link>
+                );
+              })}
+              {startups.length > 3 && (
+                <Button asChild variant="outline" className="w-full">
+                  <Link href="/dashboard/startups">
+                    View all {startups.length} startups
+                  </Link>
+                </Button>
+              )}
             </div>
           )}
         </section>
@@ -411,7 +373,7 @@ export default async function DashboardPage() {
             {incomingOffers.length === 0 ? (
               <div className="border border-border/80 bg-card/30 p-5 text-sm text-muted-foreground">
                 No offers on your listings yet. Publish for sale to start
-                receiving deposited offers.
+                receiving offers and chats.
               </div>
             ) : (
               <div className="space-y-3">
@@ -450,12 +412,15 @@ export default async function DashboardPage() {
           <div className="border border-border/80 bg-card/30 p-5">
             <h3 className="font-medium">Buying?</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Browse verified listings and leave an earnest deposit with your
-              offer.
+              Browse verified listings, send a free offer, and chat with the
+              seller.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button asChild size="sm">
                 <Link href="/marketplace">Open marketplace</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/dashboard/messages">Messages</Link>
               </Button>
               <Button asChild size="sm" variant="outline">
                 <Link href="/dashboard/offers">My offers ({myOffersCount})</Link>

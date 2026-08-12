@@ -35,7 +35,7 @@ export async function GET(
 
   const { data: offers } = await supabase
     .from("offers")
-    .select("*, profiles:buyer_id(full_name)")
+    .select("*, profiles:buyer_id(full_name), conversations(id)")
     .eq("listing_id", listing.id)
     .order("created_at", { ascending: false });
 
@@ -44,6 +44,8 @@ export async function GET(
       ...o,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       buyer_name: (o as any).profiles?.full_name ?? "Buyer",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      conversation_id: (o as any).conversations?.id ?? null,
     })),
   });
 }

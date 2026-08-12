@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { isDemoMode } from "@/lib/supabase/config";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth";
 
 /** Auth gate only — chrome/sidebar comes from AppChrome when logged in. */
 export default async function DashboardLayout({
@@ -9,10 +9,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   if (!isDemoMode()) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getAuthUser();
     if (!user) redirect("/auth/login?next=/dashboard");
   }
 

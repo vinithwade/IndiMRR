@@ -16,6 +16,7 @@ export type Database = {
           avatar_url: string | null;
           bio: string | null;
           website: string | null;
+          account_role: "buyer" | "seller" | null;
           created_at: string;
           updated_at: string;
         };
@@ -25,6 +26,7 @@ export type Database = {
           avatar_url?: string | null;
           bio?: string | null;
           website?: string | null;
+          account_role?: "buyer" | "seller" | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -158,13 +160,7 @@ export type Database = {
           amount_cents: number;
           currency: string;
           message: string | null;
-          status:
-            | "pending_deposit"
-            | "deposited"
-            | "accepted"
-            | "rejected"
-            | "withdrawn"
-            | "expired";
+          status: "pending" | "accepted" | "rejected" | "withdrawn" | "expired";
           created_at: string;
           updated_at: string;
         };
@@ -175,17 +171,95 @@ export type Database = {
           amount_cents: number;
           currency?: string;
           message?: string | null;
-          status?:
-            | "pending_deposit"
-            | "deposited"
-            | "accepted"
-            | "rejected"
-            | "withdrawn"
-            | "expired";
+          status?: "pending" | "accepted" | "rejected" | "withdrawn" | "expired";
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["offers"]["Insert"]>;
+      };
+      conversations: {
+        Row: {
+          id: string;
+          offer_id: string;
+          listing_id: string;
+          startup_id: string;
+          buyer_id: string;
+          seller_id: string;
+          last_message_at: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          offer_id: string;
+          listing_id: string;
+          startup_id: string;
+          buyer_id: string;
+          seller_id: string;
+          last_message_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["conversations"]["Insert"]>;
+      };
+      messages: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          sender_id: string;
+          body: string;
+          kind: "text" | "offer" | "offer_update";
+          meta: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          sender_id: string;
+          body: string;
+          kind?: "text" | "offer" | "offer_update";
+          meta?: Json;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["messages"]["Insert"]>;
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          kind: "message" | "offer" | "offer_update" | "platform";
+          title: string;
+          body: string;
+          href: string | null;
+          meta: Json;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          kind: "message" | "offer" | "offer_update" | "platform";
+          title: string;
+          body: string;
+          href?: string | null;
+          meta?: Json;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["notifications"]["Insert"]>;
+      };
+      user_presence: {
+        Row: {
+          user_id: string;
+          active_conversation_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          active_conversation_id?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["user_presence"]["Insert"]>;
       };
       deposits: {
         Row: {

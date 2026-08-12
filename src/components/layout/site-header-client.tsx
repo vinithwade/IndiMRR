@@ -26,66 +26,70 @@ export function SiteHeaderClient({
   if (!forceMarketing && pathname?.startsWith("/dashboard")) return null;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/80 bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        <div className="flex items-center gap-8">
-          <Link
-            href={user ? "/dashboard" : "/"}
-            className="flex items-baseline gap-1.5"
-          >
-            <span className="text-lg font-semibold tracking-tight text-foreground">
-              {BRAND.name}
-            </span>
-            <span className="hidden text-[10px] uppercase tracking-[0.2em] text-primary sm:inline">
-              verified
-            </span>
-          </Link>
-          <nav className="hidden items-center gap-5 md:flex">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {l.label}
-              </Link>
-            ))}
-            {user && (
-              <Link
-                href="/dashboard"
-                className="text-sm text-foreground transition-colors hover:text-primary"
-              >
-                Dashboard
-              </Link>
+    <>
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-border/80 bg-background/90 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-8">
+            <Link
+              href={user ? "/dashboard" : "/"}
+              className="flex shrink-0 items-baseline gap-1.5"
+            >
+              <span className="text-lg font-semibold tracking-tight text-foreground">
+                {BRAND.name}
+              </span>
+              <span className="hidden text-[10px] uppercase tracking-[0.2em] text-primary sm:inline">
+                verified
+              </span>
+            </Link>
+            <nav className="hidden items-center gap-5 md:flex">
+              {links.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {l.label}
+                </Link>
+              ))}
+              {user && (
+                <Link
+                  href="/dashboard"
+                  className="text-sm text-foreground transition-colors hover:text-primary"
+                >
+                  Dashboard
+                </Link>
+              )}
+            </nav>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <CurrencySwitcher compact />
+            {demo && (
+              <span className="hidden rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary sm:inline">
+                Demo mode
+              </span>
             )}
-          </nav>
+            {user ? (
+              <>
+                <Button asChild size="sm" className="hidden sm:inline-flex">
+                  <Link href="/dashboard/startups/new">Add startup</Link>
+                </Button>
+                <UserMenu email={user.email} name={user.name} />
+              </>
+            ) : (
+              <>
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/auth/login">Log in</Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link href="/auth/signup">Sign up</Link>
+                </Button>
+              </>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <CurrencySwitcher />
-          {demo && (
-            <span className="hidden rounded border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary sm:inline">
-              Demo mode
-            </span>
-          )}
-          {user ? (
-            <>
-              <Button asChild size="sm" className="hidden sm:inline-flex">
-                <Link href="/dashboard/startups/new">Add startup</Link>
-              </Button>
-              <UserMenu email={user.email} name={user.name} />
-            </>
-          ) : (
-            <>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/auth/login">Log in</Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link href="/auth/signup">Sign up</Link>
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
+      </header>
+      {/* Offset content so it isn't hidden under the fixed header */}
+      <div className="h-14 shrink-0" aria-hidden />
+    </>
   );
 }

@@ -19,7 +19,11 @@ export function AppChrome({
   children,
 }: {
   demo: boolean;
-  user: { email: string; name?: string | null } | null;
+  user: {
+    email: string;
+    name?: string | null;
+    accountRole?: "buyer" | "seller" | null;
+  } | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -31,6 +35,7 @@ export function AppChrome({
       <AppSidebar
         email={user?.email ?? "demo@verifiedmrr.com"}
         name={user?.name ?? (demo ? "Demo Founder" : null)}
+        accountRole={user?.accountRole ?? null}
       />
       <div className="min-h-screen lg:pl-[260px]">
         <main className="min-h-screen">{children}</main>

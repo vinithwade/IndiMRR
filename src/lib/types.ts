@@ -72,13 +72,7 @@ export type Offer = {
   amount_cents: number;
   currency: string;
   message: string | null;
-  status:
-    | "pending_deposit"
-    | "deposited"
-    | "accepted"
-    | "rejected"
-    | "withdrawn"
-    | "expired";
+  status: "pending" | "accepted" | "rejected" | "withdrawn" | "expired";
   created_at: string;
   updated_at: string;
 };

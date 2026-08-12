@@ -37,8 +37,9 @@ export default async function HomePage() {
               {BRAND.tagline}
             </h1>
             <p className="mt-5 max-w-lg text-base text-muted-foreground sm:text-lg">
-              Connect Stripe, publish verified MRR, and list for sale. Serious
-              buyers leave an earnest deposit — full closing stays off-platform.
+              Connect Stripe, publish verified MRR, and list for sale. Buyers
+              send free offers and chat with founders — full closing stays
+              off-platform.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg">

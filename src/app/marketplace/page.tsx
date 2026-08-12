@@ -27,8 +27,8 @@ export default async function MarketplacePage({
       <div className="animate-fade-up">
         <h1 className="text-3xl font-semibold tracking-tight">Marketplace</h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
-          Browse startups for sale with Stripe-verified MRR. Make an offer and
-          pay an earnest deposit to signal seriousness.
+          Browse startups for sale with Stripe-verified MRR. Send a free offer
+          and message the seller to negotiate.
         </p>
       </div>
 

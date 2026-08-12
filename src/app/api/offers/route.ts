@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import {
-  calculateDepositCents,
-  calculatePlatformFeeCents,
-} from "@/lib/mrr/calc";
-import { getStripe } from "@/lib/stripe/client";
-import { getRazorpay } from "@/lib/razorpay/client";
+import { createNotification } from "@/lib/notifications";
 
 const schema = z.object({
   listingId: z.string().uuid(),
   amountCents: z.number().int().positive(),
   currency: z.string().default("USD"),
-  message: z.string().optional(),
-  provider: z.enum(["stripe", "razorpay"]),
+  message: z.string().max(4000).optional(),
 });
 
 export async function POST(request: Request) {
@@ -27,6 +21,7 @@ export async function POST(request: Request) {
 
   const body = schema.parse(await request.json());
   const currency = body.currency.toUpperCase();
+  const note = body.message?.trim() || null;
 
   const { data: listing } = await supabase
     .from("listings")
@@ -58,8 +53,8 @@ export async function POST(request: Request) {
       buyer_id: user.id,
       amount_cents: body.amountCents,
       currency,
-      message: body.message ?? null,
-      status: "pending_deposit",
+      message: note,
+      status: "pending",
     })
     .select("*")
     .single();
@@ -71,98 +66,61 @@ export async function POST(request: Request) {
     );
   }
 
-  const depositCents = calculateDepositCents(body.amountCents, currency);
-  const feeCents = calculatePlatformFeeCents(depositCents);
-  const origin = new URL(request.url).origin;
-
-  const { data: deposit, error: depErr } = await supabase
-    .from("deposits")
+  const { data: conversation, error: convErr } = await supabase
+    .from("conversations")
     .insert({
       offer_id: offer.id,
-      provider: body.provider,
-      amount_cents: depositCents,
-      currency,
-      platform_fee_cents: feeCents,
-      status: "pending",
+      listing_id: body.listingId,
+      startup_id: listing.startup_id,
+      buyer_id: user.id,
+      seller_id: startup.owner_id,
     })
     .select("*")
     .single();
 
-  if (depErr || !deposit) {
+  if (convErr || !conversation) {
     return NextResponse.json(
-      { error: depErr?.message || "Failed to create deposit" },
+      { error: convErr?.message || "Failed to start conversation" },
       { status: 400 }
     );
   }
 
-  if (body.provider === "stripe") {
-    const stripe = getStripe();
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      success_url: `${origin}/dashboard/offers?deposit=success`,
-      cancel_url: `${origin}/dashboard/offers?deposit=cancel`,
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: currency.toLowerCase(),
-            unit_amount: depositCents,
-            product_data: {
-              name: `Earnest deposit — ${startup.name}`,
-              description: `Offer ${offer.id}. Platform fee included in terms.`,
-            },
-          },
-        },
-      ],
-      metadata: {
-        type: "deposit",
-        offerId: offer.id,
-        depositId: deposit.id,
-      },
-    });
+  const amountLabel = `${(body.amountCents / 100).toLocaleString()} ${currency}`;
+  const opener =
+    note ||
+    `Hi — I submitted an offer of ${amountLabel}. Looking forward to chatting.`;
 
-    await supabase
-      .from("deposits")
-      .update({ provider_payment_id: session.id })
-      .eq("id", deposit.id);
-
-    return NextResponse.json({
+  await supabase.from("messages").insert({
+    conversation_id: conversation.id,
+    sender_id: user.id,
+    body: opener,
+    kind: "offer",
+    meta: {
       offerId: offer.id,
-      depositId: deposit.id,
-      checkoutUrl: session.url,
-    });
-  }
-
-  const razorpay = getRazorpay();
-  const inrAmount =
-    currency === "INR"
-      ? depositCents
-      : Math.round(depositCents * (Number(process.env.USD_INR_RATE || 83) / 1));
-  // Razorpay expects paise for INR
-  const order = await razorpay.orders.create({
-    amount: currency === "INR" ? depositCents : inrAmount,
-    currency: currency === "INR" ? "INR" : "INR",
-    receipt: `dep_${deposit.id.slice(0, 8)}`,
-    notes: {
-      type: "deposit",
-      offerId: offer.id,
-      depositId: deposit.id,
+      amountCents: body.amountCents,
+      currency,
+      status: "pending",
     },
   });
 
-  await supabase
-    .from("deposits")
-    .update({ provider_order_id: order.id })
-    .eq("id", deposit.id);
+  const { data: buyerProfile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+  const buyerName = buyerProfile?.full_name || "A buyer";
+
+  await createNotification({
+    userId: startup.owner_id,
+    kind: "offer",
+    title: `New offer on ${startup.name}`,
+    body: `${buyerName} offered ${amountLabel}${note ? ` — “${note.slice(0, 120)}”` : "."}`,
+    href: `/dashboard/messages/${conversation.id}`,
+    meta: { offerId: offer.id, conversationId: conversation.id },
+  });
 
   return NextResponse.json({
     offerId: offer.id,
-    depositId: deposit.id,
-    razorpay: {
-      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      orderId: order.id,
-      amount: order.amount,
-      currency: order.currency,
-    },
+    conversationId: conversation.id,
   });
 }

@@ -3,6 +3,10 @@ export const BRAND = {
   tagline: "The database of verified startup revenues",
   description:
     "Showcase verified MRR, list your startup for sale, and connect with serious buyers.",
+  github: "https://github.com/vinithwade/IndiMRR",
+  twitter: "https://x.com",
+  linkedin: "https://www.linkedin.com",
+  email: "hello@verifiedmrr.com",
 } as const;
 
 export const LISTING_FEE_USD = 29;

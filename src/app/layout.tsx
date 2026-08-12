@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteChrome } from "@/components/layout/site-chrome";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
 import { CurrencyProvider } from "@/components/currency/currency-provider";
 import { BRAND } from "@/lib/constants";
 import "./globals.css";
@@ -33,6 +35,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <CurrencyProvider>
+          <Suspense fallback={null}>
+            <NavigationProgress />
+          </Suspense>
           <SiteChrome>{children}</SiteChrome>
           <Toaster richColors position="top-right" />
         </CurrencyProvider>
